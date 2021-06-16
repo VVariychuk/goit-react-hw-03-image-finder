@@ -1,99 +1,107 @@
+/* eslint-disable jsx-a11y/img-redundant-alt */
 import React, { Component } from 'react';
-import shortid from 'shortid';
+import Loader from "react-loader-spinner";
 
-// import Container from './components/Container';
-// import Section from './components/Section';
-// import AddContactsForm from './components/AddContactsForm';
-// import Filter from './components/Filter';
-// import ContactList from './components/ContactsList';
+import s from './App.module.css'
+// import "react-loader-spinner/dist/loader/css/react-spinner-loader.css";
 
+import Searchbar from './components/Searchbar';
+import ImageGallery from './components/ImageGallery';
+import Button from './components/Button';
+import Modal from './components/Modal';
+
+import imageAPI from './services/imageAPI';
 class App extends Component {
   state = {
-    contacts: [
-      { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
-      { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
-      { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
-      { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
-    ],
-    filter: '',
+    pictures: [],
+    currentPicture: '',
+    searchQuery: '',
+    currentPage: 1,
+    perPage: 12,
+    isLoading: false,
+    error: null,
+    openModal:false,
   }
 
-  componentDidMount() {
-    const userContacts = JSON.parse(localStorage.getItem('contacts'));
+  componentDidMount() { }
     
-    if (userContacts) {
-      this.setState({ contacts: userContacts });
-    }
-   }
 
-  componentDidUpdate(prevProps, prevState) {    
-    if (prevState.contacts !== this.state.contacts) {
-      localStorage.setItem('contacts', JSON.stringify(this.state.contacts))
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.searchQuery !== this.state.searchQuery) {
+      this.fetchPictures();
     }
+    window.scrollTo({
+              top: document.documentElement.scrollHeight,
+              behavior: "smooth",
+            })
+  }
+     
+  fetchPictures = () => {
+    const options = {
+      query: this.state.searchQuery,
+      page: this.state.page,
+      perPage: this.state.perPage,
+    }
+
+    this.setState({ isLoading: true })
+
+    return imageAPI.getImage(options).then(pictures => {
+      this.setState(prevState => ({
+        pictures: [...prevState.pictures, ...pictures],
+        page: prevState.page + 1,
+      }))
+    }).catch(error => console.log(error))
+      .finally(this.setState({isLoading: false}))
   }
 
-  AddContact = (name, number) => {
-    const contact = {
-      id: shortid.generate(),
-      name,
-      number
-    }
-    
-    this.state.contacts.some(i => i.name === name) ?
-      alert(`${name} is already in contacts`) :
-      this.setState(({ contacts }) => ({contacts: [contact, ...contacts]}))
-  };
-
-  DeleteContacts = (id) => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== id),
-    }))
-  };
-
-  onFilterChange = (e) => {
-    this.setState({filter: e.target.value})
-  };
-  
-  onContactsFilter = () => {
-    return this.state.contacts.filter(contact =>
-      contact.name.toLowerCase().includes(this.state.filter.toLowerCase()),
-    );
+  onSubmit = (query) => {
+    this.setState({
+      searchQuery: query,
+      page: 1,
+      pictures: [],
+      error:null
+    })
   }
   
-
+  toggleModal = () => {
+    this.setState((prevState) => (
+      {openModal: !prevState.openModal}
+    ))
+  }
+  
+  onImgClick = (e) => {
+    if (e.target.nodeName !== 'IMG') {
+      return
+    }
+    console.log(e);
+    this.setState({      
+      currentPicture: e.target.dataset.img,
+    })
+    this.toggleModal()
+  }
+  
   render() {
-    const {contacts, filter} = this.state;
+    const {pictures, isLoading, openModal, currentPicture} = this.state;
     return (
-
-      <h1>Hello</h1>
-      // <Container >
-
-      //   <Section
-      //     title={'Phonebook'}
-      //     children={
-      //       <AddContactsForm onSubmit={this.AddContact }
-      //       />
-      //     }
-      //   />
-      //   <Section
-      //     title={'Contacts'}
-      //     children={
-      //       <>
-      //       {contacts.length ? 
-      //       <Filter
-      //           value={filter}
-      //           onFilter={this.onFilterChange}
-      //       />: <></> 
-      //       }
-            
-      //       <ContactList
-      //         contacts={this.onContactsFilter()}
-      //         onDeleteContact={this.DeleteContacts}
-      //         />
-      //         </>
-      //     }
-      //   />
-      // </Container>
+      <div className={s.App}>
+        {isLoading &&
+          <Loader
+        type="Puff"
+        color="#00BFFF"
+        height={100}
+        width={100}
+        timeout={3000}
+      />}
+        <Searchbar onSubmit={this.onSubmit}/>
+        <ImageGallery pictures={pictures} imgClickHandler={this.onImgClick}/>
+        {pictures.length > 0 && <Button onBtnClick={this.fetchPictures} text={isLoading ? "Загружаем" : "Загрузить еще"} />}
+      
+      {openModal && (
+          <Modal onClose={this.toggleModal}>
+            <img src={currentPicture} alt="This is a big picture" />
+          </Modal>
+        )}
+      </div>
     )
   };
 }
