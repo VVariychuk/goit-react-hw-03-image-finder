@@ -3,7 +3,6 @@ import React, { Component } from 'react';
 import Loader from "react-loader-spinner";
 
 import s from './App.module.css'
-// import "react-loader-spinner/dist/loader/css/react-spinner-loader.css";
 
 import Searchbar from './components/Searchbar';
 import ImageGallery from './components/ImageGallery';
@@ -28,12 +27,11 @@ class App extends Component {
 
   componentDidUpdate(prevProps, prevState) {
     if (prevState.searchQuery !== this.state.searchQuery) {
-      this.fetchPictures();
-    }
-    window.scrollTo({
-              top: document.documentElement.scrollHeight,
-              behavior: "smooth",
-            })
+      this.fetchPictures()
+        .catch(error => console.log(error))
+      .finally(this.setState({isLoading: false}))
+        ;
+    }    
   }
      
   fetchPictures = () => {
@@ -50,8 +48,7 @@ class App extends Component {
         pictures: [...prevState.pictures, ...pictures],
         page: prevState.page + 1,
       }))
-    }).catch(error => console.log(error))
-      .finally(this.setState({isLoading: false}))
+    })
   }
 
   onSubmit = (query) => {
@@ -80,6 +77,19 @@ class App extends Component {
     this.toggleModal()
   }
   
+  onLoadMoreClick = () => {    
+    this.fetchPictures()
+      .then(() =>
+    window.scrollTo({
+              top: document.documentElement.scrollHeight,
+              behavior: "smooth",
+            })
+    )
+    .catch(error => console.log(error))
+      .finally(this.setState({isLoading: false}))
+  }
+
+
   render() {
     const {pictures, isLoading, openModal, currentPicture} = this.state;
     return (
@@ -94,7 +104,7 @@ class App extends Component {
       />}
         <Searchbar onSubmit={this.onSubmit}/>
         <ImageGallery pictures={pictures} imgClickHandler={this.onImgClick}/>
-        {pictures.length > 0 && <Button onBtnClick={this.fetchPictures} text={isLoading ? "Загружаем" : "Загрузить еще"} />}
+        {pictures.length > 0 && <Button onBtnClick={this.onLoadMoreClick} text={isLoading ? "Загружаем" : "Загрузить еще"} />}
       
       {openModal && (
           <Modal onClose={this.toggleModal}>
